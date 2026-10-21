@@ -132,10 +132,13 @@ int main(int /* argc */, char* /* argv */[]) {
         {
             "Audio Core API",
             "android.hardware.audio@7.1::IDevicesFactory",
+            "android.hardware.audio@7.0::IDevicesFactory",
+            "android.hardware.audio@6.0::IDevicesFactory",
         },
         {
             "Audio Effect API",
             "android.hardware.audio.effect@7.0::IEffectsFactory",
+            "android.hardware.audio.effect@6.0::IEffectsFactory",
         }
     };
 
