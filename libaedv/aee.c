@@ -28,8 +28,12 @@ int aee_modem_warning(const char* lib, const char* path, unsigned int options, c
 }
 
 // Data symbols imported by the stock /vendor/bin/aee_aedv{,64} daemons. Sizes match the
-// stock libaedv.so (RegLength: 4 bytes, usersmaps_info: 65544 bytes, userstack_info: 8200 bytes)
+// stock libaedv.so (RegLength: 4 bytes, usersmaps_info: 65544 bytes, userstack_info: 8200 bytes,
+// userthread_reg: 312 bytes, userthread_reg32: 280 bytes, UserSP_start: 8 bytes)
 // so the daemons can safely reference them through GLOB_DAT relocations.
 int RegLength;
+long UserSP_start;
 char usersmaps_info[65544];
 char userstack_info[8200];
+char userthread_reg[312];
+char userthread_reg32[280];
