@@ -171,20 +171,24 @@ int main(int /* argc */, char* /* argv */[]) {
             "/vendor/lib64/hw/android.hardware.soundtrigger3-impl.so",
             "_ZN4aidl7android8hardware13soundtrigger314SoundTriggerHwC1Ev",
             "_ZN4aidl7android8hardware13soundtrigger314SoundTriggerHwD1Ev");
-    const std::string soundTriggerHw_instance =
-            std::string() + ISoundTriggerHw::descriptor + "/default";
-    binder_status_t soundTriggerHw_status = AServiceManager_addService(
-            mtkSoundTriggerHw->asBinder().get(), soundTriggerHw_instance.c_str());
-    CHECK_EQ(soundTriggerHw_status, STATUS_OK);
+    if (mtkSoundTriggerHw) {
+        const std::string soundTriggerHw_instance =
+                std::string() + ISoundTriggerHw::descriptor + "/default";
+        binder_status_t soundTriggerHw_status = AServiceManager_addService(
+                mtkSoundTriggerHw->asBinder().get(), soundTriggerHw_instance.c_str());
+        CHECK_EQ(soundTriggerHw_status, STATUS_OK);
+    }
 
     auto mtkAudio = loadVendorAidlImpl<BnMtkAudio>(
             "/vendor/lib64/hw/vendor.mediatek.hardware.audio-impl.so",
             "_ZN4aidl6vendor8mediatek8hardware5audio8MtkAudioC1Ev",
             "_ZN4aidl6vendor8mediatek8hardware5audio8MtkAudioD1Ev");
-    const std::string instance = std::string() + IMtkAudio::descriptor + "/default";
-    binder_status_t mtkAudio_status =
-            AServiceManager_addService(mtkAudio->asBinder().get(), instance.c_str());
-    CHECK_EQ(mtkAudio_status, STATUS_OK);
+    if (mtkAudio) {
+        const std::string instance = std::string() + IMtkAudio::descriptor + "/default";
+        binder_status_t mtkAudio_status =
+                AServiceManager_addService(mtkAudio->asBinder().get(), instance.c_str());
+        CHECK_EQ(mtkAudio_status, STATUS_OK);
+    }
 
     joinRpcThreadpool();
 }
