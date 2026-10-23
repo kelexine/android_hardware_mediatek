@@ -37,3 +37,4 @@ char usersmaps_info[65544];
 char userstack_info[8200];
 char userthread_reg[312];
 char userthread_reg32[280];
+char ae_db_xx_secret[1024];
