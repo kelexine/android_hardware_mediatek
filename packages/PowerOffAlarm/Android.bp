@@ -41,6 +41,7 @@ cc_library {
         "generated_kernel_headers",
     ],
     shared_libs: [
+        "libbase",
         "liblog",
     ],
     system_ext_specific: true,

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <android-base/properties.h>
 #include <android-base/unique_fd.h>
 #include <jni.h>
 #include <log/log.h>
@@ -15,6 +16,7 @@
 
 #define ALARM_IOW(c, type, size) _IOW('a', (c) | ((type) << 4), size)
 #define ANDROID_ALARM_SET(type) ALARM_IOW(2, type, struct timespec)
+#define ANDROID_ALARM_POWER_ON 6
 #define ANDROID_ALARM_POWER_ON_LOGO 7
 
 static std::string alarm_dev = "/dev/alarm";
@@ -34,9 +36,19 @@ extern "C" void Java_org_lineageos_poweroffalarm_AlarmDriver_set(JNIEnv*, jobjec
     ts.tv_sec = time / 1000;
     ts.tv_nsec = (time % 1000) * 1000000;
 
-    if (ioctl(fd, ANDROID_ALARM_SET(ANDROID_ALARM_POWER_ON_LOGO), &ts) == -1) {
-        ALOGV("ANDROID_ALARM_SET ioctl failed: %s", strerror(errno));
-        return;
+    // Devices with Little Kernel (LK) like MT6765 require ANDROID_ALARM_POWER_ON (Type 6, no-logo)
+    // to boot into ALARM_BOOT (mode 7). Allow property override if logo mode is explicitly desired.
+    int alarm_type = android::base::GetBoolProperty("ro.vendor.poweroffalarm.use_logo", false)
+            ? ANDROID_ALARM_POWER_ON_LOGO : ANDROID_ALARM_POWER_ON;
+
+    if (ioctl(fd, ANDROID_ALARM_SET(alarm_type), &ts) == -1) {
+        ALOGV("ANDROID_ALARM_SET (type %d) failed: %s, trying fallback", alarm_type, strerror(errno));
+        int fallback_type = (alarm_type == ANDROID_ALARM_POWER_ON)
+                ? ANDROID_ALARM_POWER_ON_LOGO : ANDROID_ALARM_POWER_ON;
+        if (ioctl(fd, ANDROID_ALARM_SET(fallback_type), &ts) == -1) {
+            ALOGE("ANDROID_ALARM_SET ioctl failed: %s", strerror(errno));
+            return;
+        }
     }
 }
 
