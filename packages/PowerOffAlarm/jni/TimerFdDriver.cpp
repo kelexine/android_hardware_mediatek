@@ -3,16 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <sched.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <time.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/timerfd.h>
+#include <linux/ioctl.h>
+#include <string>
+
 #include <android-base/unique_fd.h>
 #include <jni.h>
 #include <log/log.h>
-
-#include <errno.h>
-#include <linux/ioctl.h>
-#include <sys/timerfd.h>
-#include <time.h>
-#include <unistd.h>
-#include <string>
 
 extern "C" jboolean Java_org_lineageos_poweroffalarm_TimerFdDriver_isSupported(JNIEnv*, jobject) {
 #ifdef CLOCK_POWER_OFF_ALARM

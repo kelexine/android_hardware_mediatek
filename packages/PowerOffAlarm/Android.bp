@@ -23,7 +23,7 @@ android_app {
     ],
 }
 
-cc_library {
+cc_library_shared {
     name: "libjni_poweroffalarm",
     srcs: [
         "jni/AlarmDriver.cpp",
@@ -38,7 +38,6 @@ cc_library {
     header_libs: [
         "jni_headers",
         "libbase_headers",
-        "generated_kernel_headers",
     ],
     shared_libs: [
         "liblog",

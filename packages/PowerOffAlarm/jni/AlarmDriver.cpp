@@ -3,17 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <sched.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <time.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/system_properties.h>
+#include <linux/ioctl.h>
+#include <string>
+
 #include <android-base/unique_fd.h>
 #include <jni.h>
 #include <log/log.h>
-#include <sys/system_properties.h>
-
-#include <errno.h>
-#include <linux/ioctl.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <string>
 
 #define ALARM_IOW(c, type, size) _IOW('a', (c) | ((type) << 4), size)
 #define ANDROID_ALARM_SET(type) ALARM_IOW(2, type, struct timespec)

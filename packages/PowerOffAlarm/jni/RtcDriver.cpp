@@ -3,16 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <sched.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <time.h>
+#include <errno.h>
+#include <string.h>
+#include <linux/ioctl.h>
+#include <linux/rtc.h>
+#include <string>
+
 #include <android-base/unique_fd.h>
 #include <jni.h>
 #include <log/log.h>
-
-#include <errno.h>
-#include <linux/ioctl.h>
-#include <linux/rtc.h>
-#include <time.h>
-#include <unistd.h>
-#include <string>
 
 #define RTC_POFF_ALM_SET _IOW('p', 0x15, struct rtc_time)
 
