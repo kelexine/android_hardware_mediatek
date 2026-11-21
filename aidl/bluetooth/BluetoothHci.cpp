@@ -43,6 +43,44 @@ bool starts_with(const std::string& str, const std::string& prefix) {
     return str.compare(0, prefix.length(), prefix) == 0;
 }
 
+std::vector<uint8_t> NormalizeErroneousDataReportingEvent(const std::vector<uint8_t>& raw_event) {
+    constexpr uint8_t kHciEvtCmdComplete = 0x0E;
+    constexpr uint8_t kHciEvtCmdStatus = 0x0F;
+    constexpr uint16_t kHciCmdReadErroneousDataReporting = 0x0C5A;
+    constexpr uint16_t kHciCmdWriteErroneousDataReporting = 0x0C5B;
+    constexpr uint8_t kHciStatusSuccess = 0x00;
+
+    if (raw_event.size() >= 6 && raw_event[0] == kHciEvtCmdStatus) {
+        const uint16_t opcode =
+                static_cast<uint16_t>(raw_event[4]) | (static_cast<uint16_t>(raw_event[5]) << 8);
+        const uint8_t credits = raw_event[3];
+
+        if (opcode == kHciCmdReadErroneousDataReporting) {
+            ALOGI("Rewriting Command Status (0x0F) to Complete (0x0E) for 0x0C5A");
+            return {
+                    kHciEvtCmdComplete,
+                    0x05,
+                    credits,
+                    static_cast<uint8_t>(opcode & 0xFF),
+                    static_cast<uint8_t>((opcode >> 8) & 0xFF),
+                    kHciStatusSuccess,
+                    0x00,
+            };
+        } else if (opcode == kHciCmdWriteErroneousDataReporting) {
+            ALOGI("Rewriting Command Status (0x0F) to Complete (0x0E) for 0x0C5B");
+            return {
+                    kHciEvtCmdComplete,
+                    0x04,
+                    credits,
+                    static_cast<uint8_t>(opcode & 0xFF),
+                    static_cast<uint8_t>((opcode >> 8) & 0xFF),
+                    kHciStatusSuccess,
+            };
+        }
+    }
+    return raw_event;
+}
+
 class BluetoothDeathRecipient {
   public:
     BluetoothDeathRecipient(BluetoothHci* hci) : mHci(hci) {}
@@ -128,7 +166,9 @@ ndk::ScopedAStatus BluetoothHci::initialize(const std::shared_ptr<IBluetoothHciC
             [](const std::vector<uint8_t>&) { LOG_ALWAYS_FATAL("Unexpected command!"); },
             [cb](const std::vector<uint8_t>& raw_acl) { cb->aclDataReceived(raw_acl); },
             [cb](const std::vector<uint8_t>& raw_sco) { cb->scoDataReceived(raw_sco); },
-            [cb](const std::vector<uint8_t>& raw_event) { cb->hciEventReceived(raw_event); },
+            [cb](const std::vector<uint8_t>& raw_event) {
+                cb->hciEventReceived(NormalizeErroneousDataReportingEvent(raw_event));
+            },
             [cb](const std::vector<uint8_t>& raw_iso) { cb->isoDataReceived(raw_iso); },
             [this]() { ALOGI("HCI socket device disconnected"); });
     if (!rc) {
