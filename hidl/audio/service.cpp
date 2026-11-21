@@ -144,7 +144,7 @@ int main(int /* argc */, char* /* argv */[]) {
 
     const std::vector<std::pair<std::string,std::string>> optionalInterfaceSharedLibs = {
         {
-            "android.hardware.bluetooth.audio-impl-mediatek",
+            "android.hardware.bluetooth.audio-impl",
             "createIBluetoothAudioProviderFactory",
         },
     };
