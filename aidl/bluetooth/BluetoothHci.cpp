@@ -19,6 +19,7 @@
 
 #include "BluetoothHci.h"
 
+#include <atomic>
 #include <cutils/properties.h>
 
 #include "log/log.h"
@@ -43,9 +44,12 @@ bool starts_with(const std::string& str, const std::string& prefix) {
     return str.compare(0, prefix.length(), prefix) == 0;
 }
 
-std::vector<uint8_t> NormalizeErroneousDataReportingEvent(const std::vector<uint8_t>& raw_event) {
+std::atomic<uint16_t> g_last_sniff_subrating_handle{0};
+
+std::vector<uint8_t> NormalizeHciEvent(const std::vector<uint8_t>& raw_event) {
     constexpr uint8_t kHciEvtCmdComplete = 0x0E;
     constexpr uint8_t kHciEvtCmdStatus = 0x0F;
+    constexpr uint16_t kHciCmdSniffSubrating = 0x0811;
     constexpr uint16_t kHciCmdReadErroneousDataReporting = 0x0C5A;
     constexpr uint16_t kHciCmdWriteErroneousDataReporting = 0x0C5B;
     constexpr uint8_t kHciStatusSuccess = 0x00;
@@ -53,6 +57,7 @@ std::vector<uint8_t> NormalizeErroneousDataReportingEvent(const std::vector<uint
     if (raw_event.size() >= 6 && raw_event[0] == kHciEvtCmdStatus) {
         const uint16_t opcode =
                 static_cast<uint16_t>(raw_event[4]) | (static_cast<uint16_t>(raw_event[5]) << 8);
+        const uint8_t status = raw_event[2];
         const uint8_t credits = raw_event[3];
 
         if (opcode == kHciCmdReadErroneousDataReporting) {
@@ -75,6 +80,20 @@ std::vector<uint8_t> NormalizeErroneousDataReportingEvent(const std::vector<uint
                     static_cast<uint8_t>(opcode & 0xFF),
                     static_cast<uint8_t>((opcode >> 8) & 0xFF),
                     kHciStatusSuccess,
+            };
+        } else if (opcode == kHciCmdSniffSubrating) {
+            const uint16_t handle = g_last_sniff_subrating_handle.load(std::memory_order_relaxed);
+            ALOGI("Rewriting Command Status (0x0F) to Complete (0x0E) for 0x0811 (handle=0x%04x)",
+                  handle);
+            return {
+                    kHciEvtCmdComplete,
+                    0x06,
+                    credits,
+                    static_cast<uint8_t>(opcode & 0xFF),
+                    static_cast<uint8_t>((opcode >> 8) & 0xFF),
+                    status,
+                    static_cast<uint8_t>(handle & 0xFF),
+                    static_cast<uint8_t>((handle >> 8) & 0xFF),
             };
         }
     }
@@ -167,7 +186,7 @@ ndk::ScopedAStatus BluetoothHci::initialize(const std::shared_ptr<IBluetoothHciC
             [cb](const std::vector<uint8_t>& raw_acl) { cb->aclDataReceived(raw_acl); },
             [cb](const std::vector<uint8_t>& raw_sco) { cb->scoDataReceived(raw_sco); },
             [cb](const std::vector<uint8_t>& raw_event) {
-                cb->hciEventReceived(NormalizeErroneousDataReportingEvent(raw_event));
+                cb->hciEventReceived(NormalizeHciEvent(raw_event));
             },
             [cb](const std::vector<uint8_t>& raw_iso) { cb->isoDataReceived(raw_iso); },
             [this]() { ALOGI("HCI socket device disconnected"); });
@@ -213,6 +232,11 @@ ndk::ScopedAStatus BluetoothHci::close() {
 }
 
 ndk::ScopedAStatus BluetoothHci::sendHciCommand(const std::vector<uint8_t>& packet) {
+    if (packet.size() >= 5 && packet[0] == 0x11 && packet[1] == 0x08) {
+        const uint16_t handle =
+                static_cast<uint16_t>(packet[3]) | (static_cast<uint16_t>(packet[4]) << 8);
+        g_last_sniff_subrating_handle.store(handle, std::memory_order_relaxed);
+    }
     return send(PacketType::COMMAND, packet);
 }
 
